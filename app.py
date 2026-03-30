@@ -6,7 +6,7 @@ A web interface for finding exciting Premier League matches.
 
 import asyncio
 from datetime import datetime
-from dash import Dash, html, Input, Output, State, callback, dcc
+from dash import Dash, html, Input, Output, State, callback
 import dash_mantine_components as dmc
 from exciting_games import ExcitingGameFinder
 
@@ -72,6 +72,7 @@ app.layout = dmc.MantineProvider(
                             size="lg",
                             variant="gradient",
                             gradient={"from": "teal", "to": "lime", "deg": 105},
+                            loading=False,
                         ),
                     ],
                     withBorder=True,
@@ -88,9 +89,6 @@ app.layout = dmc.MantineProvider(
                 
                 # Results container
                 html.Div(id="results-container"),
-                
-                # Store for async results
-                dcc.Store(id="analysis-store"),
                 
                 dmc.Space(h=50),
             ]
@@ -167,99 +165,105 @@ def create_match_card(game: dict, index: int, debug: bool) -> dmc.Card:
 
 
 @callback(
-    Output("analysis-store", "data"),
-    Output("loading-overlay", "visible", allow_duplicate=True),
+    Output("results-container", "children"),
+    Output("loading-overlay", "visible"),
+    Output("search-button", "loading"),
     Input("search-button", "n_clicks"),
     State("days-input", "value"),
     State("debug-switch", "checked"),
     prevent_initial_call=True
 )
-def run_analysis(n_clicks, days_back, debug_mode):
-    """Run the analysis when button is clicked."""
+def run_and_display_analysis(n_clicks, days_back, debug_mode):
+    """Run analysis and display results when button is clicked."""
     if n_clicks is None:
-        return None, False
+        return html.Div(), False, False
     
-    # Show loading
-    # Run the analysis
-    finder = ExcitingGameFinder(days_back=days_back, debug=debug_mode)
-    
-    # Run async function in sync context
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        exciting_games = loop.run_until_complete(finder.find_exciting_games())
-    finally:
-        loop.close()
-    
-    return {"games": exciting_games, "debug": debug_mode}, False
-
-
-@callback(
-    Output("results-container", "children"),
-    Output("loading-overlay", "visible"),
-    Input("analysis-store", "data"),
-)
-def display_results(data):
-    """Display the analysis results."""
-    if data is None or not data.get("games"):
-        return html.Div(), False
-    
-    games = data["games"]
-    debug = data.get("debug", False)
-    
-    if not games:
-        return dmc.Alert(
-            title="No Matches Found",
-            color="yellow",
+        print(f"Starting analysis for {days_back} days, debug={debug_mode}")
+        
+        # Run the analysis
+        finder = ExcitingGameFinder(days_back=days_back, debug=debug_mode)
+        
+        # Run async function in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            exciting_games = loop.run_until_complete(finder.find_exciting_games())
+            print(f"Found {len(exciting_games)} exciting games")
+        finally:
+            loop.close()
+        
+        # Build results display
+        if not exciting_games:
+            result = dmc.Alert(
+                title="No Matches Found",
+                color="yellow",
+                children=[
+                    html.P("No particularly exciting matches found in this time window."),
+                    html.P("Try increasing the number of days or waiting for more games.", style={"marginTop": "10px"})
+                ],
+            )
+            return result, False, False
+        
+        # Create header
+        results_header = dmc.Card(
             children=[
-                html.P("No particularly exciting matches found in this time window."),
-                html.P("Try increasing the number of days or waiting for more games.", style={"marginTop": "10px"})
+                html.H2(
+                    f"🏆 Found {len(exciting_games)} Exciting Match{'es' if len(exciting_games) != 1 else ''}",
+                    style={"textAlign": "center", "color": "teal", "margin": "0"}
+                ),
+                html.P(
+                    "Ranked by excitement score - highest first",
+                    style={"textAlign": "center", "opacity": "0.7", "fontSize": "0.9rem", "marginTop": "10px", "marginBottom": "0"}
+                )
             ],
-        ), False
-    
-    # Create header
-    results_header = dmc.Card(
-        children=[
-            html.H2(
-                f"🏆 Found {len(games)} Exciting Match{'es' if len(games) != 1 else ''}",
-                style={"textAlign": "center", "color": "teal", "margin": "0"}
-            ),
-            html.P(
-                "Ranked by excitement score - highest first",
-                style={"textAlign": "center", "opacity": "0.7", "fontSize": "0.9rem", "marginTop": "10px", "marginBottom": "0"}
-            )
-        ],
-        withBorder=True,
-        shadow="sm",
-        radius="md",
-        style={"marginBottom": "25px", "background": "linear-gradient(135deg, rgba(0,128,128,0.1) 0%, rgba(0,255,0,0.1) 100%)"},
-        p="lg"
-    )
-    
-    # Create match cards
-    match_cards = [
-        create_match_card(game, idx + 1, debug)
-        for idx, game in enumerate(games)
-    ]
-    
-    # Footer note
-    footer_note = dmc.Alert(
-        children=[
-            html.P(
-                "💡 Note: Scores and final results are hidden to preserve the excitement!",
-                style={"fontWeight": "500", "margin": "5px 0"}
-            ),
-            html.P(
-                "Watch the replays to see how these thrilling matches unfolded.",
-                style={"margin": "5px 0"}
-            )
-        ],
-        title="Spoiler-Free Viewing",
-        color="blue",
-        variant="light",
-    ) if not debug else None
-    
-    return html.Div([results_header] + match_cards + ([footer_note] if footer_note else [])), False
+            withBorder=True,
+            shadow="sm",
+            radius="md",
+            style={"marginBottom": "25px", "background": "linear-gradient(135deg, rgba(0,128,128,0.1) 0%, rgba(0,255,0,0.1) 100%)"},
+            p="lg"
+        )
+        
+        # Create match cards
+        match_cards = [
+            create_match_card(game, idx + 1, debug_mode)
+            for idx, game in enumerate(exciting_games)
+        ]
+        
+        # Footer note
+        footer_note = dmc.Alert(
+            children=[
+                html.P(
+                    "💡 Note: Scores and final results are hidden to preserve the excitement!",
+                    style={"fontWeight": "500", "margin": "5px 0"}
+                ),
+                html.P(
+                    "Watch the replays to see how these thrilling matches unfolded.",
+                    style={"margin": "5px 0"}
+                )
+            ],
+            title="Spoiler-Free Viewing",
+            color="blue",
+            variant="light",
+        ) if not debug_mode else None
+        
+        result = html.Div([results_header] + match_cards + ([footer_note] if footer_note else []))
+        return result, False, False
+        
+    except Exception as e:
+        print(f"Error in run_and_display_analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        error_display = dmc.Alert(
+            title="Error",
+            color="red",
+            children=[
+                html.P("An error occurred while fetching matches:"),
+                html.P(str(e), style={"fontFamily": "monospace", "fontSize": "0.85rem", "marginTop": "10px", "whiteSpace": "pre-wrap"})
+            ],
+        )
+        return error_display, False, False
 
 
 if __name__ == "__main__":
