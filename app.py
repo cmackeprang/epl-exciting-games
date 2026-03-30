@@ -179,7 +179,9 @@ def run_and_display_analysis(n_clicks, days_back, debug_mode):
         return html.Div(), False, False
     
     try:
+        print(f"\n{'='*70}")
         print(f"Starting analysis for {days_back} days, debug={debug_mode}")
+        print(f"Current time: {datetime.now()}")
         
         # Run the analysis
         finder = ExcitingGameFinder(days_back=days_back, debug=debug_mode)
@@ -189,18 +191,20 @@ def run_and_display_analysis(n_clicks, days_back, debug_mode):
         asyncio.set_event_loop(loop)
         try:
             exciting_games = loop.run_until_complete(finder.find_exciting_games())
-            print(f"Found {len(exciting_games)} exciting games")
+            print(f"Analysis complete. Found {len(exciting_games)} exciting games")
         finally:
             loop.close()
         
         # Build results display
-        if not exciting_games:
+        if not exciting_games or len(exciting_games) == 0:
             result = dmc.Alert(
-                title="No Matches Found",
+                title="No Exciting Matches Found",
                 color="yellow",
                 children=[
                     html.P("No particularly exciting matches found in this time window."),
-                    html.P("Try increasing the number of days or waiting for more games.", style={"marginTop": "10px"})
+                    html.P("Try increasing the number of days or waiting for more games.", style={"marginTop": "10px"}),
+                    html.P(f"Searched: Last {days_back} days from {datetime.now().strftime('%Y-%m-%d')}", 
+                           style={"marginTop": "15px", "fontSize": "0.85rem", "opacity": "0.6"})
                 ],
             )
             return result, False, False
@@ -251,16 +255,24 @@ def run_and_display_analysis(n_clicks, days_back, debug_mode):
         return result, False, False
         
     except Exception as e:
-        print(f"Error in run_and_display_analysis: {e}")
+        print(f"\n{'='*70}")
+        print(f"ERROR in run_and_display_analysis: {e}")
+        print(f"Error type: {type(e).__name__}")
         import traceback
-        traceback.print_exc()
+        error_trace = traceback.format_exc()
+        print(error_trace)
+        print(f"{'='*70}\n")
         
         error_display = dmc.Alert(
-            title="Error",
+            title="Error Occurred",
             color="red",
             children=[
-                html.P("An error occurred while fetching matches:"),
-                html.P(str(e), style={"fontFamily": "monospace", "fontSize": "0.85rem", "marginTop": "10px", "whiteSpace": "pre-wrap"})
+                html.P("An error occurred while fetching matches from Understat:"),
+                html.P(str(e), style={"fontFamily": "monospace", "fontSize": "0.85rem", "marginTop": "10px", "whiteSpace": "pre-wrap"}),
+                html.Details([
+                    html.Summary("Show full error trace", style={"cursor": "pointer", "marginTop": "15px"}),
+                    html.Pre(error_trace, style={"fontSize": "0.75rem", "marginTop": "10px", "overflow": "auto", "maxHeight": "300px"})
+                ])
             ],
         )
         return error_display, False, False

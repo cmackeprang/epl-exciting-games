@@ -37,8 +37,19 @@ class ExcitingGameFinder:
             List of match dictionaries with relevant data
         """
         print(f"Fetching EPL matches from the last {self.days_back} days...")
+        print(f"Current date: {datetime.now()}")
+        print(f"Cutoff date: {self.cutoff_date}")
         
-        async with aiohttp.ClientSession() as session:
+        # Create session with proper headers to avoid being blocked
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        # Create timeout and connector for better reliability
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        connector = aiohttp.TCPConnector(ssl=False)  # Disable SSL verification if needed
+        
+        async with aiohttp.ClientSession(headers=headers, timeout=timeout, connector=connector) as session:
             understat = Understat(session)
             
             # Get current season (2025/2026 season)
@@ -49,12 +60,16 @@ class ExcitingGameFinder:
             else:
                 season = current_year
             
+            print(f"Fetching data for season: {season}")
+            
             try:
                 # Fetch EPL league data for the current season
                 league_results = await understat.get_league_results(
                     league_name="EPL",
                     season=season
                 )
+                
+                print(f"Total matches fetched from Understat: {len(league_results)}")
                 
                 # Filter matches within our time window
                 recent_matches = []
@@ -78,10 +93,16 @@ class ExcitingGameFinder:
                             continue
                 
                 print(f"Found {len(recent_matches)} completed matches in the time window.")
+                if len(recent_matches) > 0:
+                    print(f"First match date: {recent_matches[0].get('datetime')}")
+                    print(f"Last match date: {recent_matches[-1].get('datetime')}")
                 return recent_matches
                 
             except Exception as e:
                 print(f"Error fetching match data: {e}")
+                print(f"Error type: {type(e).__name__}")
+                import traceback
+                traceback.print_exc()
                 print("This may be due to network issues or Understat API changes.")
                 return []
     

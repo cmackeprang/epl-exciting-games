@@ -5,3 +5,5 @@ lxml
 dash
 dash-mantine-components
 gunicorn
+certifi
+aiohttp[speedups]
