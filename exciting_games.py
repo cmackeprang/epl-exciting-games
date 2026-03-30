@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 import json
 import ssl
-import certifi
 
 import aiohttp
 from understat import Understat
@@ -49,7 +48,10 @@ class ExcitingGameFinder:
         
         # Create timeout and SSL context for better reliability
         timeout = aiohttp.ClientTimeout(total=60, connect=10)
-        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        # Use default SSL context without custom certifi
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
         connector = aiohttp.TCPConnector(ssl=ssl_context)
         
         async with aiohttp.ClientSession(headers=headers, timeout=timeout, connector=connector) as session:
@@ -68,6 +70,18 @@ class ExcitingGameFinder:
             try:
                 # Fetch EPL league data for the current season
                 print(f"Making API request to Understat for EPL {season}...")
+                
+                # Try to make a test request first to check connectivity
+                test_url = f"https://understat.com/league/EPL/{season}"
+                print(f"Test request to: {test_url}")
+                async with session.get(test_url) as response:
+                    print(f"Response status: {response.status}")
+                    print(f"Response headers: {dict(response.headers)}")
+                    content = await response.text()
+                    print(f"Response content length: {len(content) if content else 0}")
+                    if content and len(content) < 1000:
+                        print(f"Response content (first 500 chars): {content[:500]}")
+                
                 league_results = await understat.get_league_results(
                     league_name="EPL",
                     season=season
@@ -76,7 +90,8 @@ class ExcitingGameFinder:
                 # Check if we got valid data
                 if league_results is None:
                     print("ERROR: Received None from Understat API")
-                    print("This suggests the API request failed or was blocked")
+                    print("This suggests the API request was blocked or returned empty data")
+                    print("Understat likely blocks requests from cloud/datacenter IPs")
                     return []
                 
                 if not isinstance(league_results, list):

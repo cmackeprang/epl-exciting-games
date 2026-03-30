@@ -5,10 +5,16 @@ A web interface for finding exciting Premier League matches.
 """
 
 import asyncio
+import os
 from datetime import datetime
 from dash import Dash, html, Input, Output, State, callback
 import dash_mantine_components as dmc
 from exciting_games import ExcitingGameFinder
+from exciting_games_cached import CachedExcitingGameFinder
+
+
+# Determine if we're in production (Render) or local development
+IS_PRODUCTION = os.environ.get('RENDER', False) or os.environ.get('HOST', '127.0.0.1') != '127.0.0.1'
 
 
 # Initialize the Dash app with Mantine
@@ -34,8 +40,19 @@ app.layout = dmc.MantineProvider(
                 ),
                 html.P(
                     "Discover exciting Premier League matches without spoiling the results",
-                    style={"textAlign": "center", "marginBottom": "30px", "fontSize": "1.2rem", "opacity": "0.7"}
+                    style={"textAlign": "center", "marginBottom": "10px", "fontSize": "1.2rem", "opacity": "0.7"}
                 ),
+            ] + ([
+                dmc.Alert(
+                    children=[
+                        html.P("🔄 Note: This site uses cached data (updated periodically) to avoid API blocking issues.", 
+                               style={"margin": "0", "fontSize": "0.85rem"})
+                    ],
+                    color="blue",
+                    variant="light",
+                    style={"marginBottom": "30px"}
+                )
+            ] if IS_PRODUCTION else []) + [
                 
                 # Input Card
                 dmc.Card(
@@ -91,7 +108,7 @@ app.layout = dmc.MantineProvider(
                 html.Div(id="results-container"),
                 
                 dmc.Space(h=50),
-            ]
+            ] # End of concatenated children list
         )
     ]
 )
@@ -182,9 +199,13 @@ def run_and_display_analysis(n_clicks, days_back, debug_mode):
         print(f"\n{'='*70}")
         print(f"Starting analysis for {days_back} days, debug={debug_mode}")
         print(f"Current time: {datetime.now()}")
+        print(f"Running in: {'PRODUCTION (using cache)' if IS_PRODUCTION else 'DEVELOPMENT (live API)'}")
         
-        # Run the analysis
-        finder = ExcitingGameFinder(days_back=days_back, debug=debug_mode)
+        # Use cached finder in production, live API in development
+        if IS_PRODUCTION:
+            finder = CachedExcitingGameFinder(days_back=days_back, debug=debug_mode)
+        else:
+            finder = ExcitingGameFinder(days_back=days_back, debug=debug_mode)
         
         # Run async function in sync context
         loop = asyncio.new_event_loop()

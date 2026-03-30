@@ -1,0 +1,112 @@
+{
+  "cached_at": "2026-03-30T15:29:04.211783",
+  "days_back": 30,
+  "games": [
+    {
+      "match_id": "29070",
+      "date": "2026-03-14 15:00:00",
+      "home_team": "Burnley",
+      "away_team": "Bournemouth",
+      "home_goals": 0,
+      "away_goals": 0,
+      "home_xg": 1.67695,
+      "away_xg": 2.36979,
+      "excitement_score": 4,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides",
+        "Significant deviation from expected outcomes"
+      ]
+    },
+    {
+      "match_id": "29058",
+      "date": "2026-03-03 19:30:00",
+      "home_team": "Bournemouth",
+      "away_team": "Brentford",
+      "home_goals": 0,
+      "away_goals": 0,
+      "home_xg": 2.3177,
+      "away_xg": 0.673328,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "Significant deviation from expected outcomes"
+      ]
+    },
+    {
+      "match_id": "29065",
+      "date": "2026-03-04 20:15:00",
+      "home_team": "Newcastle United",
+      "away_team": "Manchester United",
+      "home_goals": 2,
+      "away_goals": 1,
+      "home_xg": 1.96637,
+      "away_xg": 1.80571,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ]
+    },
+    {
+      "match_id": "29069",
+      "date": "2026-03-16 20:00:00",
+      "home_team": "Brentford",
+      "away_team": "Wolverhampton Wanderers",
+      "home_goals": 2,
+      "away_goals": 2,
+      "home_xg": 2.7966,
+      "away_xg": 1.80044,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ]
+    },
+    {
+      "match_id": "29078",
+      "date": "2026-03-20 20:00:00",
+      "home_team": "Bournemouth",
+      "away_team": "Manchester United",
+      "home_goals": 2,
+      "away_goals": 2,
+      "home_xg": 1.76664,
+      "away_xg": 1.74574,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ]
+    },
+    {
+      "match_id": "29082",
+      "date": "2026-03-21 15:00:00",
+      "home_team": "Fulham",
+      "away_team": "Burnley",
+      "home_goals": 3,
+      "away_goals": 1,
+      "home_xg": 3.48438,
+      "away_xg": 1.92556,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ]
+    },
+    {
+      "match_id": "29086",
+      "date": "2026-03-22 14:15:00",
+      "home_team": "Tottenham",
+      "away_team": "Nottingham Forest",
+      "home_goals": 0,
+      "away_goals": 3,
+      "home_xg": 1.6189,
+      "away_xg": 1.54408,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ]
+    }
+  ]
+}
