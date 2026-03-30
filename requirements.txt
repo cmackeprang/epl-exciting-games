@@ -1,6 +1,7 @@
-understat==0.1.14
+understat
 aiohttp
 beautifulsoup4
+lxml
 dash
 dash-mantine-components
 gunicorn
