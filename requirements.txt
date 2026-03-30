@@ -1,6 +1,6 @@
 understat==0.1.14
-aiohttp>=3.13.4
-beautifulsoup4>=4.14.3
-dash>=2.17.0
-dash-mantine-components>=0.14.0
-gunicorn>=21.0.0
+aiohttp
+beautifulsoup4
+dash
+dash-mantine-components
+gunicorn
