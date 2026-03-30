@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """
-EPL Exciting Game Finder - Dash Mantine UI
-A web interface for finding exciting Premier League matches.
+Exciting Game Finder - Dash Mantine UI
+A web interface for finding exciting football matches.
+Supports multiple data sources (Understat, API-Football) and leagues (EPL, Champions League).
 """
 
 import asyncio
 import os
 from datetime import datetime
-from dash import Dash, html, Input, Output, State, callback
+from dash import Dash, html, Input, Output, State, callback, ctx
 import dash_mantine_components as dmc
+
+# Import both implementations
 from exciting_games import ExcitingGameFinder
 from exciting_games_cached import CachedExcitingGameFinder
+from exciting_games_understat import ExcitingGameFinder as UnderstatFinder
+from exciting_games_cached_understat import CachedExcitingGameFinder as CachedUnderstatFinder
 
 
 # Determine if we're in production (Render) or local development
@@ -19,7 +24,7 @@ IS_PRODUCTION = os.environ.get('RENDER', False) or os.environ.get('HOST', '127.0
 
 # Initialize the Dash app with Mantine
 app = Dash(__name__)
-app.title = "EPL Exciting Game Finder"
+app.title = "Exciting Game Finder"
 
 # Expose the Flask server for production deployment (gunicorn)
 server = app.server
@@ -35,18 +40,22 @@ app.layout = dmc.MantineProvider(
                 # Header
                 dmc.Space(h=30),
                 html.H1(
-                    "⚽ EPL Exciting Game Finder",
+                    "⚽ Exciting Game Finder",
                     style={"textAlign": "center", "marginBottom": "10px"}
                 ),
                 html.P(
-                    "Discover exciting Premier League matches without spoiling the results",
+                    "Discover exciting football matches without spoiling the results",
                     style={"textAlign": "center", "marginBottom": "10px", "fontSize": "1.2rem", "opacity": "0.7"}
                 ),
             ] + ([
                 dmc.Alert(
                     children=[
-                        html.P("🔄 Note: This site uses cached data that automatically refreshes once per day (first query of each day).", 
-                               style={"margin": "0", "fontSize": "0.85rem"})
+                        html.P("� API-Football: Cache auto-refreshes once per day (first query). Works from cloud servers!", 
+                               style={"margin": "0", "fontSize": "0.85rem"}),
+                        html.P("⚠️ Free tier limitation: Only seasons 2022-2024 available (not current 2025 season).",
+                               style={"margin": "5px 0 0 0", "fontSize": "0.85rem"}),
+                        html.P("📊 Understat: Cache must be manually updated locally (blocked on cloud servers).",
+                               style={"margin": "5px 0 0 0", "fontSize": "0.85rem"})
                     ],
                     color="blue",
                     variant="light",
@@ -66,12 +75,35 @@ app.layout = dmc.MantineProvider(
                         dmc.Space(h=20),
                         dmc.NumberInput(
                             id="days-input",
-                            label="How many days back should I check?",
-                            description="Enter a number between 1 and 90 days",
+                            label="Number of recent matches to analyze",
+                            description="Higher numbers analyze more matches (1-90). Note: Free API tier shows 2024 season data only.",
                             value=10,
                             min=1,
                             max=90,
                             step=1,
+                            style={"width": "100%"},
+                        ),
+                        dmc.Space(h=20),
+                        dmc.SegmentedControl(
+                            id="source-selector",
+                            value="api-football",
+                            data=[
+                                {"label": "🚀 API-Football (Cloud-friendly)", "value": "api-football"},
+                                {"label": "📊 Understat (Local only)", "value": "understat"},
+                            ],
+                            fullWidth=True,
+                            color="teal",
+                        ),
+                        dmc.Space(h=20),
+                        dmc.MultiSelect(
+                            id="league-selector",
+                            label="Leagues (select one or more)",
+                            description="Champions League only available with API-Football. Note: Free API tier only has 2022-2024 seasons.",
+                            data=[
+                                {"label": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League", "value": "EPL"},
+                                {"label": "🏆 Champions League", "value": "UCL"},
+                            ],
+                            value=["EPL"],
                             style={"width": "100%"},
                         ),
                         dmc.Space(h=20),
@@ -158,12 +190,21 @@ def create_match_card(game: dict, index: int, debug: bool) -> dmc.Card:
     return dmc.Card(
         children=[
             html.Div([
-                dmc.Badge(
-                    f"#{index}",
-                    color="blue",
-                    variant="filled",
-                    size="lg"
-                ),
+                html.Div([
+                    dmc.Badge(
+                        f"#{index}",
+                        color="blue",
+                        variant="filled",
+                        size="lg"
+                    ),
+                    dmc.Badge(
+                        game.get('league', 'Unknown'),
+                        color="grape",
+                        variant="light",
+                        size="md",
+                        style={"marginLeft": "8px"}
+                    ),
+                ], style={"display": "flex", "alignItems": "center"}),
                 html.Span(date_str, style={"fontSize": "0.9rem", "opacity": "0.7"})
             ], style={"display": "flex", "justifyContent": "space-between", "alignItems": "center"}),
             dmc.Space(h=10),
@@ -182,30 +223,67 @@ def create_match_card(game: dict, index: int, debug: bool) -> dmc.Card:
 
 
 @callback(
+    Output("league-selector", "disabled"),
+    Input("source-selector", "value"),
+)
+def update_league_availability(source):
+    """Disable Champions League when Understat is selected."""
+    # Only API-Football supports Champions League
+    return source == "understat"
+
+
+@callback(
+    Output("league-selector", "value"),
+    Input("source-selector", "value"),
+    State("league-selector", "value"),
+)
+def reset_league_if_needed(source, current_leagues):
+    """Reset to EPL only if switching to Understat with UCL selected."""
+    if source == "understat":
+        # Understat only supports EPL
+        return ["EPL"]
+    return current_leagues
+
+
+@callback(
     Output("results-container", "children"),
     Output("loading-overlay", "visible"),
     Output("search-button", "loading"),
     Input("search-button", "n_clicks"),
     State("days-input", "value"),
+    State("league-selector", "value"),
+    State("source-selector", "value"),
     State("debug-switch", "checked"),
     prevent_initial_call=True
 )
-def run_and_display_analysis(n_clicks, days_back, debug_mode):
+def run_and_display_analysis(n_clicks, days_back, leagues, source, debug_mode):
     """Run analysis and display results when button is clicked."""
     if n_clicks is None:
         return html.Div(), False, False
     
+    # Ensure leagues is a list
+    if not leagues:
+        leagues = ["EPL"]
+    elif isinstance(leagues, str):
+        leagues = [leagues]
+    
     try:
         print(f"\n{'='*70}")
-        print(f"Starting analysis for {days_back} days, debug={debug_mode}")
+        print(f"Starting analysis for {days_back} days, leagues={leagues}, source={source}, debug={debug_mode}")
         print(f"Current time: {datetime.now()}")
         print(f"Running in: {'PRODUCTION (using cache)' if IS_PRODUCTION else 'DEVELOPMENT (live API)'}")
         
-        # Use cached finder in production, live API in development
-        if IS_PRODUCTION:
-            finder = CachedExcitingGameFinder(days_back=days_back, debug=debug_mode)
-        else:
-            finder = ExcitingGameFinder(days_back=days_back, debug=debug_mode)
+        # Choose the appropriate finder based on source and environment
+        if source == "api-football":
+            if IS_PRODUCTION:
+                finder = CachedExcitingGameFinder(days_back=days_back, leagues=leagues, debug=debug_mode)
+            else:
+                finder = ExcitingGameFinder(days_back=days_back, leagues=leagues, debug=debug_mode)
+        else:  # understat
+            if IS_PRODUCTION:
+                finder = CachedUnderstatFinder(days_back=days_back, debug=debug_mode)
+            else:
+                finder = UnderstatFinder(days_back=days_back, debug=debug_mode)
         
         # Run async function in sync context
         loop = asyncio.new_event_loop()
@@ -275,6 +353,25 @@ def run_and_display_analysis(n_clicks, days_back, debug_mode):
         result = html.Div([results_header] + match_cards + ([footer_note] if footer_note else []))
         return result, False, False
         
+    except ValueError as e:
+        # Handle configuration errors (e.g., missing API key)
+        print(f"\n{'='*70}")
+        print(f"CONFIGURATION ERROR: {e}")
+        print(f"{'='*70}\n")
+        
+        error_display = dmc.Alert(
+            title="Configuration Error",
+            color="orange",
+            children=[
+                html.P(str(e)),
+                html.P("If using API-Football:", style={"marginTop": "15px", "fontWeight": "bold"}),
+                html.Ul([
+                    html.Li("Ensure API_FOOTBALL_KEY is set in .env file (local) or environment variables (Render)"),
+                    html.Li("Sign up at https://www.api-football.com/"),
+                ]),
+            ],
+        )
+        return error_display, False, False
     except Exception as e:
         print(f"\n{'='*70}")
         print(f"ERROR in run_and_display_analysis: {e}")
@@ -288,7 +385,7 @@ def run_and_display_analysis(n_clicks, days_back, debug_mode):
             title="Error Occurred",
             color="red",
             children=[
-                html.P("An error occurred while fetching matches from Understat:"),
+                html.P(f"An error occurred while fetching matches:"),
                 html.P(str(e), style={"fontFamily": "monospace", "fontSize": "0.85rem", "marginTop": "10px", "whiteSpace": "pre-wrap"}),
                 html.Details([
                     html.Summary("Show full error trace", style={"cursor": "pointer", "marginTop": "15px"}),
@@ -308,7 +405,7 @@ if __name__ == "__main__":
     debug = os.environ.get("ENVIRONMENT", "development") == "development"
     
     print("="*70)
-    print("Starting EPL Exciting Game Finder Dashboard...")
+    print("Starting Exciting Game Finder Dashboard...")
     print("="*70)
     print(f"\n🌐 Opening dashboard on {host}:{port}")
     print("\n💡 Press Ctrl+C to stop the server\n")

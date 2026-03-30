@@ -1,0 +1,39 @@
+{
+  "cached_at": "2026-03-30T16:36:25.686524",
+  "days_back": 30,
+  "league": "EPL",
+  "games": [
+    {
+      "match_id": "1208396",
+      "date": "2025-05-25 15:00:00",
+      "home_team": "Liverpool",
+      "away_team": "Crystal Palace",
+      "home_goals": 1,
+      "away_goals": 1,
+      "home_xg": 2.14,
+      "away_xg": 1.77,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ],
+      "league": "Premier League"
+    },
+    {
+      "match_id": "1208401",
+      "date": "2025-05-25 15:00:00",
+      "home_team": "Tottenham",
+      "away_team": "Brighton",
+      "home_goals": 1,
+      "away_goals": 4,
+      "home_xg": 2.03,
+      "away_xg": 2.24,
+      "excitement_score": 2,
+      "is_exciting": true,
+      "reasons": [
+        "High-quality chances for both sides"
+      ],
+      "league": "Premier League"
+    }
+  ]
+}
