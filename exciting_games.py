@@ -9,6 +9,8 @@ import argparse
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 import json
+import ssl
+import certifi
 
 import aiohttp
 from understat import Understat
@@ -45,9 +47,10 @@ class ExcitingGameFinder:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
-        # Create timeout and connector for better reliability
+        # Create timeout and SSL context for better reliability
         timeout = aiohttp.ClientTimeout(total=60, connect=10)
-        connector = aiohttp.TCPConnector(ssl=False)  # Disable SSL verification if needed
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
         
         async with aiohttp.ClientSession(headers=headers, timeout=timeout, connector=connector) as session:
             understat = Understat(session)
@@ -64,10 +67,22 @@ class ExcitingGameFinder:
             
             try:
                 # Fetch EPL league data for the current season
+                print(f"Making API request to Understat for EPL {season}...")
                 league_results = await understat.get_league_results(
                     league_name="EPL",
                     season=season
                 )
+                
+                # Check if we got valid data
+                if league_results is None:
+                    print("ERROR: Received None from Understat API")
+                    print("This suggests the API request failed or was blocked")
+                    return []
+                
+                if not isinstance(league_results, list):
+                    print(f"ERROR: Expected list from API, got {type(league_results)}")
+                    print(f"Data received: {league_results}")
+                    return []
                 
                 print(f"Total matches fetched from Understat: {len(league_results)}")
                 
