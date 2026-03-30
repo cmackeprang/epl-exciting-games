@@ -77,7 +77,7 @@ app.layout = dmc.MantineProvider(
                         dmc.Space(h=20),
                         dmc.Switch(
                             id="debug-switch",
-                            label="Debug Mode (Show xG and scores)",
+                            label="Spoiler Mode (Show xG and scores)",
                             checked=False,
                             size="md",
                         ),
@@ -140,7 +140,7 @@ def create_match_card(game: dict, index: int, debug: bool) -> dmc.Card:
     if debug:
         debug_content = [
             dmc.Space(h=15),
-            dmc.Divider(label="Debug Information", labelPosition="center"),
+            dmc.Divider(label="Spoiler Information", labelPosition="center"),
             dmc.Space(h=10),
             html.P("Why it's exciting:", style={"fontWeight": "500", "fontSize": "0.9rem", "opacity": "0.7", "margin": "5px 0"}),
             html.Div(reason_badges, style={"marginBottom": "10px"}),

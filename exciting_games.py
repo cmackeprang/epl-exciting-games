@@ -315,7 +315,7 @@ class ExcitingGameFinder:
             print(f"\n{i}. {game['home_team']} vs {game['away_team']}")
             print(f"   Date: {date_str}")
             
-            # Debug mode: show excitement score, reasons, and actual stats
+            # Spoiler mode: show excitement score, reasons, and actual stats
             if self.debug:
                 print(f"   [DEBUG] Excitement Score: {game['excitement_score']:.2f}")
                 
@@ -332,7 +332,7 @@ class ExcitingGameFinder:
 
 def get_user_input() -> Tuple[int, bool]:
     """
-    Get user input for the time window and debug mode.
+    Get user input for the time window and spoiler mode.
     
     Returns:
         Tuple of (days_back, debug_mode)
@@ -359,7 +359,7 @@ def get_user_input() -> Tuple[int, bool]:
             print("\n\nExiting...")
             exit(0)
     
-    # Check for debug mode via command line
+    # Check for spoiler mode via command line
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--debug', action='store_true', help='Show xG and goals for validation')
     args, _ = parser.parse_known_args()
