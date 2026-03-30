@@ -45,7 +45,7 @@ app.layout = dmc.MantineProvider(
             ] + ([
                 dmc.Alert(
                     children=[
-                        html.P("🔄 Note: This site uses cached data (updated periodically) to avoid API blocking issues.", 
+                        html.P("🔄 Note: This site uses cached data that automatically refreshes once per day (first query of each day).", 
                                style={"margin": "0", "fontSize": "0.85rem"})
                     ],
                     color="blue",
