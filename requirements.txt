@@ -1,5 +1,5 @@
 understat
-aiohttp
+aiohttp==3.9.5
 beautifulsoup4
 lxml
 dash
